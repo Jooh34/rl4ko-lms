@@ -10,8 +10,12 @@ DATA_MAX = None
 # DATA_MAX = 100
 
 class KoSummarizationDataset(Dataset):
-    def __init__(self, tokenizer, max_len, ignore_index=-100):
-        file_path = "./data/ko_summarization/news_train_original.json"
+    def __init__(self, tokenizer, max_len, type, ignore_index=-100):
+        if type == "train":
+            file_path = "./data/ko_summarization/news_train_original.json"
+        else:
+            file_path = "./data/ko_summarization/news_valid_original.json"
+            
         self.x_data = []
         self.y_data = []
         self.z_data = []

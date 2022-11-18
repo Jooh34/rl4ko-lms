@@ -1,40 +1,38 @@
-import os
-import sys
-from transformers import PreTrainedTokenizerFast, BartForConditionalGeneration
+import os, sys
 import torch
-from tqdm import tqdm
-from datetime import datetime
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.optimization import AdamW, get_cosine_schedule_with_warmup
+from tqdm import tqdm
+import wandb
 
 cur_dir = os.path.dirname(__file__)
 sys.path.append(os.path.join(cur_dir, '../'))
+
 from common.dataset import KoSummarizationDataset
 
-time_format = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-CHPT_PATH = './checkpoints/kobart-{}.pt'.format(time_format)
-
 cfg = {
-    'batch_size': 4,
-    'accumulation_step' : 16,
+    'batch_size': 1,
+    'accumulation_step' : 32,
     'epochs': 20,
     'lr': 2e-5,
 }
 device = 'cuda'
 
-tokenizer = PreTrainedTokenizerFast.from_pretrained('gogamza/kobart-base-v2')
-pad_token_id = tokenizer.pad_token_id
-model = BartForConditionalGeneration.from_pretrained('gogamza/kobart-base-v2').to(device)
-model.train()
+tokenizer = AutoTokenizer.from_pretrained(
+    # or float32 version: revision=KoGPT6B-ryan1.5b
+    'kakaobrain/kogpt', revision='KoGPT6B-ryan1.5b-float16',
+    bos_token='[BOS]', eos_token='[EOS]', unk_token='[UNK]', pad_token='[PAD]', mask_token='[MASK]'
+)
 
-param_optimizer = list(model.named_parameters())
-no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-optimizer_grouped_parameters = [
-            {'params': [p for n, p in param_optimizer if not any(
-                nd in n for nd in no_decay)], 'weight_decay': 0.01},
-            {'params': [p for n, p in param_optimizer if any(
-                nd in n for nd in no_decay)], 'weight_decay': 0.0}
-        ]
-optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=cfg['lr'], weight_decay=0.01)
+model = AutoModelForCausalLM.from_pretrained(
+    # or float32 version: revision=KoGPT6B-ryan1.5b
+    'kakaobrain/kogpt', revision='KoGPT6B-ryan1.5b-float16',
+    pad_token_id=tokenizer.eos_token_id,
+    torch_dtype='auto', low_cpu_mem_usage=True
+).to(device='cuda', non_blocking=True)
+
+pad_token_id = tokenizer.pad_token_id
+model.train()
 
 kosum_dataset = KoSummarizationDataset(tokenizer, 512, "train")
 
@@ -47,8 +45,8 @@ train_dataloader = torch.utils.data.DataLoader(
     train_dataset, batch_size=cfg['batch_size'], shuffle=True)
 test_dataloader = torch.utils.data.DataLoader(
     test_dataset, batch_size=cfg['batch_size'], shuffle=True)
-
-optimizer = AdamW(optimizer_grouped_parameters,
+    
+optimizer = AdamW(model.parameters(),
                   lr = cfg['lr'], # 학습률
                   eps = 1e-8 # 0으로 나누는 것을 방지하기 위한 epsilon 값
                 )
@@ -59,6 +57,7 @@ scheduler = get_cosine_schedule_with_warmup(optimizer,
                                             num_warmup_steps = 0,
                                             num_training_steps = total_steps)
 
+# wandb.init(project='project-name')
 for epoch in range(cfg['epochs']):
     model.train()
     for (i, batch) in enumerate(tqdm(iter(train_dataloader))):
