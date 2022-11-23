@@ -5,6 +5,10 @@ import torch
 from tqdm import tqdm
 from datetime import datetime
 from transformers.optimization import AdamW, get_cosine_schedule_with_warmup
+import wandb
+import numpy as np
+import random
+import copy
 
 cur_dir = os.path.dirname(__file__)
 sys.path.append(os.path.join(cur_dir, '../'))
@@ -13,12 +17,24 @@ from common.dataset import KoSummarizationDataset
 time_format = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 CHPT_PATH = './checkpoints/kobart-{}.pt'.format(time_format)
 
+wandb.init(project='rl4kolms-kobart')
 cfg = {
     'batch_size': 4,
-    'accumulation_step' : 16,
-    'epochs': 20,
+    'accumulate_grad_batches' : 8,
+    'epochs': 10,
     'lr': 2e-5,
+    "warmup_ratio": 0.1,
+    'checkpoint_path': CHPT_PATH,
+    "seed": 3444
 }
+wandb.config = cfg
+
+torch.manual_seed(cfg['seed'])
+random.seed(cfg['seed'])
+np.random.seed(cfg['seed'])
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 device = 'cuda'
 
 tokenizer = PreTrainedTokenizerFast.from_pretrained('gogamza/kobart-base-v2')
@@ -46,18 +62,25 @@ train_dataset, test_dataset = torch.utils.data.random_split(
 train_dataloader = torch.utils.data.DataLoader(
     train_dataset, batch_size=cfg['batch_size'], shuffle=True)
 test_dataloader = torch.utils.data.DataLoader(
-    test_dataset, batch_size=cfg['batch_size'], shuffle=True)
+    test_dataset, batch_size=cfg['batch_size'], shuffle=False)
 
 optimizer = AdamW(optimizer_grouped_parameters,
                   lr = cfg['lr'], # 학습률
                   eps = 1e-8 # 0으로 나누는 것을 방지하기 위한 epsilon 값
                 )
 
-total_steps = len(train_dataloader.dataset) * cfg['epochs']
+num_warmup_steps = (len(train_dataloader.dataset) // (cfg['batch_size']*cfg['accumulate_grad_batches'])) * 2
+total_steps = (len(train_dataloader.dataset) // (cfg['batch_size']*cfg['accumulate_grad_batches'])) * cfg['epochs']
 
 scheduler = get_cosine_schedule_with_warmup(optimizer, 
-                                            num_warmup_steps = 0,
+                                            num_warmup_steps = num_warmup_steps,
                                             num_training_steps = total_steps)
+
+
+columns=["epoch", "generated1", "generated2", "generated3"]
+table_datum=[]
+
+len_dl = len(train_dataloader)
 
 for epoch in range(cfg['epochs']):
     model.train()
@@ -84,20 +107,22 @@ for epoch in range(cfg['epochs']):
         loss = outputs.loss
         loss.backward()
 
-        if (i+1) % cfg['accumulation_step'] == 0:             # Wait for several backward steps
+        if (i+1) % (cfg['batch_size'] * cfg['accumulate_grad_batches']) == 0 or i == len_dl-1:   # Wait for several backward steps
             optimizer.step()
             optimizer.zero_grad()
-            print('[Epoch: {:>4}] train loss = {:>.9}'.format(epoch + 1, loss))
-
-        optimizer.zero_grad()
-        scheduler.step()
+            scheduler.step()
+            wandb.log({"loss_train": loss, "lr": optimizer.param_groups[0]["lr"]})
+            # print('[Epoch: {:>4}] train loss = {:>.9}'.format(epoch + 1, loss))
 
 
     torch.save(model.state_dict(), CHPT_PATH)
     model.eval()
-    for batch in tqdm(iter(test_dataloader)):
+    val_loss = 0.0
+    evaluation_data=[epoch, 'generated1', 'generated2', 'generated3']
+    for (i, batch) in enumerate(tqdm(iter(test_dataloader))):
         input_ids, label_ids, dec_input_ids = batch
         input_ids=input_ids.type(torch.LongTensor).to(device)
+        temp_label_ids = copy.deepcopy(label_ids)
         label_ids=label_ids.type(torch.LongTensor).to(device)
         dec_input_ids=dec_input_ids.type(torch.LongTensor).to(device)
         
@@ -115,6 +140,28 @@ for epoch in range(cfg['epochs']):
             labels=label_ids,
             return_dict=True)
 
-        loss = outputs.loss
+        val_loss += outputs.loss.item()*len(batch)
+        if i < 3:
+            gen_ids = model.generate(input_ids,
+                           max_length=512,
+                           num_beams=5,
+                           eos_token_id=tokenizer.eos_token_id
+                           )
+
+            generated = tokenizer.decode(gen_ids[0], skip_special_tokens=True)
+            if epoch == 0:
+                input_sentence = tokenizer.decode(input_ids[0], skip_special_tokens=True)
+                temp_label_ids = np.where(temp_label_ids < 0, 0, temp_label_ids)
+                label = tokenizer.decode(temp_label_ids[0], skip_special_tokens=True)
+            else:
+                input_sentence = ""
+                label =""
+            
+            evaluation_data[i+1] = generated
+
+    table_datum.append(evaluation_data)
+    result_table = wandb.Table(data=table_datum, columns=columns)
+    wandb.log({"table" : result_table})
     
+    wandb.log({"val_loss": val_loss/len(test_dataloader.sampler), "epoch": epoch})
     print('[Epoch: {:>4}] test loss = {:>.9}'.format(epoch + 1, loss))
