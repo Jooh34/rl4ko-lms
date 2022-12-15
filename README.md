@@ -11,7 +11,7 @@ Training Korean Text-generation Model using Reinforcement Learning
 2. place to ./data/ko_summarization/
 
 
-## 1. baseline training
+## 1. Baseline training
 
 modify config in categorical-finetune/train_kobart.py
 ```
@@ -33,7 +33,7 @@ cfg = {
 python categorical-finetune/train_kobart.py
 ```
   
-## 2. rl training
+## 2. RL training
 
 modify config in rl-finetune/train_kobart.py 
 
