@@ -3,6 +3,7 @@
 ## 1. baseline training
 
 modify config in categorical-finetune/train_kobart.py
+```
 cfg = {
     'batch_size': 4,
     'accumulate_grad_batches' : 8,
@@ -13,15 +14,19 @@ cfg = {
     "seed": 3444,
     'num_to_rouge': 50,
 }
+```
 
-'''
+####run categorical-finetune
+
+```
 python categorical-finetune/train_kobart.py
-'''
+```
   
 ## 2. rl training
 
 modify config in rl-finetune/train_kobart.py 
 
+```
 cfg = {
     'batch_size': 1, # rl supports only one batch
     'accumulate_grad_batches' : 8,
@@ -36,6 +41,9 @@ cfg = {
     'calc_values' : True,
     'use_beamsearch' : True,
 }
+```
+
+#### run rl-finetune
 
 '''
 python rl-finetune/train_kobart.py
