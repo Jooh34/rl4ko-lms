@@ -1,5 +1,6 @@
 # rl4ko-lms
-1. baseline training
+
+## 1. baseline training
 
 modify config in categorical-finetune/train_kobart.py
 cfg = {
@@ -13,11 +14,11 @@ cfg = {
     'num_to_rouge': 50,
 }
 
-
-  python categorical-finetune/train_kobart.py
+'''
+python categorical-finetune/train_kobart.py
+'''
   
-  
-2. rl training
+## 2. rl training
 
 modify config in rl-finetune/train_kobart.py 
 
@@ -36,4 +37,6 @@ cfg = {
     'use_beamsearch' : True,
 }
 
-  python categorical-finetune/train_kobart.py
+'''
+python rl-finetune/train_kobart.py
+'''
