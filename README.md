@@ -16,7 +16,7 @@ cfg = {
 }
 ```
 
-####run categorical-finetune
+#### run categorical-finetune
 
 ```
 python categorical-finetune/train_kobart.py
@@ -45,6 +45,6 @@ cfg = {
 
 #### run rl-finetune
 
-'''
+```
 python rl-finetune/train_kobart.py
-'''
+```
