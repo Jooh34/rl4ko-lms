@@ -6,13 +6,13 @@ import numpy as np
 cur_dir = os.path.dirname(__file__)
 sys.path.append(os.path.join(cur_dir, '../'))
 
-DATA_MAX = None
-# DATA_MAX = 100
-
 class KoSummarizationDataset(Dataset):
-    def __init__(self, tokenizer, max_len, type, ignore_index=-100):
+    def __init__(self, tokenizer, max_len, type, max_data=None, ignore_index=-100):
+        DATA_MAX=max_data
         if type == "train":
             file_path = "./data/ko_summarization/news_train_original.json"
+        elif type == "small":
+            file_path = "./data/ko_summarization/temp.json"
         else:
             file_path = "./data/ko_summarization/news_valid_original.json"
             
@@ -57,7 +57,7 @@ class KoSummarizationDataset(Dataset):
                 self.y_data.append(np.array(label_ids, dtype=np.int_))
                 self.z_data.append(np.array(dec_input_ids, dtype=np.int_))
 
-                if DATA_MAX and DATA_MAX < ix:
+                if max_data and max_data < ix:
                     break
 
         print(f'KoSummarization : {len(self.y_data)} data initialized.')
