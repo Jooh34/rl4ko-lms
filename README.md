@@ -1,4 +1,15 @@
 # rl4ko-lms
+## Overview
+Training Korean Text-generation Model using Reinforcement Learning
+
+<img width="611" alt="overview" src="https://user-images.githubusercontent.com/15865928/207782306-3035ebee-e2fe-4f42-b9a3-4b5f1dddff8b.png">
+
+## Data preparation
+1. sign up and download from
+[AI Hub 문서 요약 데이터](https://aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=realm&dataSetSn=97)
+
+2. place to ./data/ko_summarization/
+
 
 ## 1. baseline training
 
