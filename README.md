@@ -65,6 +65,7 @@ python rl-finetune/train_kobart.py
 ## Result
 #### Baseline
 <img width="624" alt="image" src="https://user-images.githubusercontent.com/15865928/208120192-b1631c7c-99e9-4dd9-9e93-40db7fb38329.png">
+
 #### Supervised + PPO
 <img width="557" alt="image" src="https://user-images.githubusercontent.com/15865928/208120296-f161f362-faf1-43bf-b194-e020df201536.png">
 
