@@ -54,8 +54,23 @@ cfg = {
 }
 ```
 
+
+
 #### run rl-finetune
 
 ```
 python rl-finetune/train_kobart.py
 ```
+
+## Result
+#### Baseline
+<img width="624" alt="image" src="https://user-images.githubusercontent.com/15865928/208120192-b1631c7c-99e9-4dd9-9e93-40db7fb38329.png">
+#### Supervised + PPO
+<img width="557" alt="image" src="https://user-images.githubusercontent.com/15865928/208120296-f161f362-faf1-43bf-b194-e020df201536.png">
+
+## Result - text summarization
+<img width="876" alt="스크린샷 2022-12-16 오후 11 29 58" src="https://user-images.githubusercontent.com/15865928/208120375-26d02f41-1cc4-4874-9f4b-a1026937ee96.png">
+
+<img width="853" alt="스크린샷 2022-12-16 오후 11 30 25" src="https://user-images.githubusercontent.com/15865928/208120471-edb8942c-e1c9-4cd7-a034-d74e55607a4a.png">
+
+
